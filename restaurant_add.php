@@ -1,9 +1,9 @@
 <?php
-	$dbconnect = mysqli_connect("10.5.18.104", "14CS10059", "btech14", "test");
-	if(mysqli_connect_errno()) {
-		echo "Connection failed:".mysqli_connect_error();
-		exit;
-	}
+  session_start();
+  $conn = new mysqli("10.5.18.104", "14CS10059", "btech14", "test");
+  if ($conn->connect_error) {
+      die("Connection failed: " . $conn->connect_error);
+  }
 ?>
 
 <!DOCTYPE html>
@@ -22,6 +22,9 @@
   .Custbody {
       background-image: url("RestRadBackground.jpg");
   }
+  .tab{
+    background-color: burlywood;
+  }
   .CRP{
       color: moccasin;
       text-shadow: 10px 10px 10px black;
@@ -33,29 +36,28 @@
   </head>
   <body class="Custbody">
   <?php
+    if(isset($_POST['Back'])){
+      header("Location: restaurant.php");
+      exit();
+    }
     if(isset($_POST['Add']) && !empty($_POST['DishName'])) {
-    	
+      
       if(empty($_POST['DishPrice'])){
-    		$_POST['DishPrice'] = 0;
-    	}
-
-      $curr_user = $_GET['username'];
-
+        $_POST['DishPrice'] = 0;
+      }
+      $curr_user = $_SESSION['username'];
       $max = 1;
-    	$get = "select dishid from dish order by dishid desc";
-      $result = mysqli_query($dbconnect, $get);
-    	if ($result->num_rows > 0) {
+      $get = "select dishid from dish order by dishid desc";
+      $result = $conn->query($get);
+      if ($result->num_rows > 0) {
           $firstrow = $result->fetch_assoc();
           $max = $firstrow['dishid'] + 1; 
       }
-
-          $pass = "insert into dish values('".$_POST['DishName']."', '".$_POST['Cuisine']."', ".$_POST['DishPrice'].", '".$max."')"; 
-          $query = mysqli_query($dbconnect, $pass);
-
-          $pass = "insert into menu values('".$curr_user."', '".$max."')"; 
-          $query = mysqli_query($dbconnect, $pass);
-
-          header("Location: restaurant_add.php?username=".$curr_user);
+          $pass = "insert into dish values('".$_POST['DishName']."', '".$_POST['Cuisine']."', ".$_POST['DishPrice'].", '".$max."')";
+          $query = $conn->query($pass);
+          $pass = "insert into menu values('".$curr_user."','".$max."','Available')"; 
+          $query = $conn->query($pass);
+          header("Location: restaurant_add.php");
           exit();
     }
   ?>
@@ -69,7 +71,56 @@
         
         <button class = "btn" type = "submit" name = "Add">Add</button>
         </form>
-        <h4> <?php echo $msg ?> </h4>
+
+        <form class = "form-signin" role = "form" action = "<?php echo htmlspecialchars($_SERVER['PHP_SELF']); ?>" method = "post">
+          <button class = "btn" type = "submit" name = "Back">Back to home!</button>
+        </form>
+        <!--<h4> <?php echo $msg ?> </h4>-->
+
+         <?php
+            $get = 'select dish.name,cuisine,cost,dish.dishid,status from dish inner join 
+            (select * from restaurant, menu where restaurant.username = menu.resid and 
+              restaurant.username = "'.$_SESSION['username'].'") as a1 on dish.dishid = a1.dishid order by status';
+            $result = $conn->query($get);
+         ?>
+
+            <form class = "form-signin" role = "form" action = "<?php echo htmlspecialchars
+            ($_SERVER['PHP_SELF']); ?>" method = "post">
+
+            <table class="table table-bordered tab">
+              <h3>Menu</h3>
+              <thead>
+                <tr>
+                  <th>Dish ID</th>
+                  <th>Dish Name</th>
+                  <th>Cuisine</th>
+                  <th>Dish Cost</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+
+            <tbody>
+            <?php
+             if($result->num_rows > 0) {
+              while($row = $result->fetch_assoc()) { 
+                  echo ' <tr>
+                    <td>'.$row['dishid'].'</td>
+                    <td>'.$row['name'].'</td>
+                    <td>'.$row['cuisine'].'</td>
+                    <td>'.$row['cost'].'</td>
+                    <td>'.$row['status'].'</td>
+                  </tr>';
+              }      
+            }
+            else{
+              echo "There is nothing in the menu currently";
+            }
+          $conn->close();
+         ?> 
+        </tbody>
+        </table>
+        </form>
+
         </div>
       <div class="col-sm-3"></div>
   </body>
